@@ -90,32 +90,26 @@ const SliderLabel = styled.label`
   }
 `;
 
-const CapturedImageContainer = styled.div`
+const StyledSnapShotContainer = styled.div`
   width: 100%;
-  height: 200px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-`;
-
-const CapturedImage = styled.img`
-  max-width: 100%;
-  max-height: 100%;
+  height: auto;
+  aspect-ratio: 16/9;
+  border: 1px solid whitesmoke;
   border-radius: 10px;
+  position: relative;
 `;
 
-const CaptureButton = styled.button`
+const StyledSnapShotButton = styled.button`
+  margin-top: 10px;
   padding: 10px 20px;
-  font-size: 1em;
-  color: var(--main-font-color);
-  background-color: #007bff;
+  background-color: #4CAF50;
+  color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  margin-top: 10px;
 
   &:hover {
-    background-color: #0056b3;
+    background-color: #45a049;
   }
 `;
 
@@ -131,18 +125,22 @@ const App = () => {
     chair: 0,
   });
   const [controlsVisible, setControlsVisible] = useState(true);
-  const [capturedImage, setCapturedImage] = useState(null);
+  const [snapshot, setSnapshot] = useState(null);
 
   // Store loaded objects and transform controls
   const objectsRef = useRef({});
   const transformControlsRef = useRef({});
   const rendererRef = useRef();
   const canvasWrapperRef = useRef();
+  const sceneRef = useRef();
+  const cameraRef = useRef();
 
   useEffect(() => {
     // Scene, Camera, Renderer
     const scene = new THREE.Scene();
+    sceneRef.current = scene;
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    cameraRef.current = camera;
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     rendererRef.current = renderer;
 
@@ -278,118 +276,132 @@ const App = () => {
     setAssetsVisibility((prevState) => {
       const newState = { ...prevState, [key]: !prevState[key] };
       if (objectsRef.current[key]) {
-        objectsRef.current[key].visible = newState[key] && controlsVisible;
-        console.log(`${key} visibility toggled to: ${newState[key]}`);
-      }
-      return newState;
-    });
-  };
+        objectsRef.current[key].visible = new
 
-  const handleScaleChange = (key, value) => {
-    setAssetsScale((prevState) => {
-      const newState = { ...prevState, [key]: value };
-      if (objectsRef.current[key]) {
-        let scaleFactor = 1; // Default scale factor
-        if (value !== 0) {
-          scaleFactor = Math.pow(2, value / 10); // Calculate scale factor
-        }
 
-        objectsRef.current[key].scale.set(scaleFactor, scaleFactor, scaleFactor);
-        console.log(`${key} scale changed to: ${scaleFactor}`);
-      }
-      return newState;
-    });
-  };
+newState[key] && controlsVisible;
+console.log(`${key} visibility toggled to: ${newState[key]}`);
+}
+return newState;
+});
+};
 
-  const captureCanvasImage = () => {
-    console.log('Capture button clicked');
-    const renderer = rendererRef.current;
-    if (renderer) {
-      const canvas = renderer.domElement;
-      const image = canvas.toDataURL('image/png');
-      setCapturedImage(image);
-      console.log('Canvas image captured and set:', image);
-    } else {
-      console.error('Renderer reference is not available');
-    }
-  };
+const handleScaleChange = (key, value) => {
+setAssetsScale((prevState) => {
+const newState = { ...prevState, [key]: value };
+if (objectsRef.current[key]) {
+let scaleFactor = 1; // Default scale factor
+if (value !== 0) {
+  scaleFactor = Math.pow(2, value / 10); // Calculate scale factor
+}
 
-  return (
-    <Container>
-      <StyledTitleContainer>
-        <StyledH1>3D Model Viewer</StyledH1>
-      </StyledTitleContainer>
-      <StyledWorkspace>
-        <ControlSide>
-          <h2>Assets</h2>
-          <ToggleLabel>
-            <input
-              type="checkbox"
-              checked={assetsVisibility.slash}
-              onChange={() => toggleVisibility('slash')}
-            />
-            Slash
-          </ToggleLabel>
-          <SliderLabel>
-            Scale:
-            <input
-              type="range"
-              min="-10"
-              max="10"
-              value={assetsScale.slash}
-              onChange={(e) => handleScaleChange('slash', parseInt(e.target.value))}
-            />
-          </SliderLabel>
-          <ToggleLabel>
-            <input
-              type="checkbox"
-              checked={assetsVisibility.house}
-              onChange={() => toggleVisibility('house')}
-            />
-            House
-          </ToggleLabel>
-          <SliderLabel>
-            Scale:
-            <input
-              type="range"
-              min="-10"
-              max="10"
-              value={assetsScale.house}
-              onChange={(e) => handleScaleChange('house', parseInt(e.target.value))}
-            />
-          </SliderLabel>
-          <ToggleLabel>
-            <input
-              type="checkbox"
-              checked={assetsVisibility.chair}
-              onChange={() => toggleVisibility('chair')}
-            />
-            Chair
-          </ToggleLabel>
-          <SliderLabel>
-            Scale:
-            <input
-              type="range"
-              min="-10"
-              max="10"
-              value={assetsScale.chair}
-              onChange={(e) => handleScaleChange('chair', parseInt(e.target.value))}
-            />
-          </SliderLabel>
-        </ControlSide>
-        <CanvasWrapper id="canvas-wrapper" ref={canvasWrapperRef}>
-          {/* Placeholder for WebGL Canvas */}
-        </CanvasWrapper>
-        <ControlSide>
-          <h2>Controls</h2>
-          <CapturedImageContainer>
-            {capturedImage ? <CapturedImage src={capturedImage} alt="Captured Scene" /> : 'No image captured yet'}
-          </CapturedImageContainer>
-          <CaptureButton onClick={captureCanvasImage}>Take Photo</CaptureButton>
-        </ControlSide>
-      </StyledWorkspace>
-    </Container>
-  );
+objectsRef.current[key].scale.set(scaleFactor, scaleFactor, scaleFactor);
+console.log(`${key} scale changed to: ${scaleFactor}`);
+}
+return newState;
+});
+};
+
+const handleTakeSnapshot = () => {
+// Create a canvas element for rendering
+const canvas = document.createElement('canvas');
+const width = canvasWrapperRef.current.clientWidth;
+const height = canvasWrapperRef.current.clientHeight;
+const aspectRatio = 16 / 9;
+canvas.width = width;
+canvas.height = width / aspectRatio;
+
+const context = canvas.getContext('2d');
+rendererRef.current.render(sceneRef.current, cameraRef.current);
+
+// Draw renderer result on canvas
+context.drawImage(rendererRef.current.domElement, 0, 0, width, height);
+
+// Create an image element from the canvas data
+const dataURL = canvas.toDataURL();
+setSnapshot(dataURL);
+};
+
+return (
+<Container>
+<StyledTitleContainer>
+<StyledH1>3D Model Viewer</StyledH1>
+</StyledTitleContainer>
+<StyledWorkspace>
+<ControlSide>
+  <h2>Assets</h2>
+  <ToggleLabel>
+    <input
+      type="checkbox"
+      checked={assetsVisibility.slash}
+      onChange={() => toggleVisibility('slash')}
+    />
+    Slash
+  </ToggleLabel>
+  <SliderLabel>
+    Scale:
+    <input
+      type="range"
+      min="-10"
+      max="10"
+      value={assetsScale.slash}
+      onChange={(e) => handleScaleChange('slash', parseInt(e.target.value))}
+    />
+  </SliderLabel>
+  <ToggleLabel>
+    <input
+      type="checkbox"
+      checked={assetsVisibility.house}
+      onChange={() => toggleVisibility('house')}
+    />
+    House
+  </ToggleLabel>
+  <SliderLabel>
+    Scale:
+    <input
+      type="range"
+      min="-10"
+      max="10"
+      value={assetsScale.house}
+      onChange={(e) => handleScaleChange('house', parseInt(e.target.value))}
+    />
+  </SliderLabel>
+  <ToggleLabel>
+    <input
+      type="checkbox"
+      checked={assetsVisibility.chair}
+      onChange={() => toggleVisibility('chair')}
+    />
+    Chair
+  </ToggleLabel>
+  <SliderLabel>
+    Scale:
+    <input
+      type="range"
+      min="-10"
+      max="10"
+      value={assetsScale.chair}
+      onChange={(e) => handleScaleChange('chair', parseInt(e.target.value))}
+    />
+  </SliderLabel>
+ 
+</ControlSide>
+<CanvasWrapper id="canvas-wrapper" ref={canvasWrapperRef}>
+  {/* Placeholder for WebGL Canvas */}
+</CanvasWrapper>
+<ControlSide>
+  <h2>Controls</h2>
+  {/* Additional controls can be added here */}
+  <StyledSnapShotContainer>
+    {snapshot && <img src={snapshot} alt="Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+  </StyledSnapShotContainer>
+  <StyledSnapShotButton onClick={handleTakeSnapshot}>
+    Take a Photo
+  </StyledSnapShotButton>
+</ControlSide>
+</StyledWorkspace>
+</Container>
+);
 };
 
 export default App;
