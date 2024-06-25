@@ -24,7 +24,7 @@ const StyledWorkspace = styled.div`
 
 const ControlSide = styled.div`
   width: 100%;
-  height: 900px;
+  height: 600px;
   flex: 1;
   background-color: #383838;
   color: var(--main-font-color);
@@ -40,11 +40,11 @@ const ControlSide = styled.div`
 
 const CanvasWrapper = styled.div`
   width: 100%;
-  height: 100%;
-  flex: 2;
+  height: auto;
+  flex: 3;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   overflow: hidden;
   position: relative;
   border-radius: 20px;
@@ -93,10 +93,12 @@ const SliderLabel = styled.label`
 const StyledSnapShotContainer = styled.div`
   width: 100%;
   height: auto;
-  aspect-ratio: 16/9;
+  aspect-ratio: 16 / 9;
   border: 1px solid whitesmoke;
   border-radius: 10px;
   position: relative;
+  overflow-x: hidden;
+  overflow-y: hidden;
 `;
 
 const StyledSnapShotButton = styled.button`
@@ -113,6 +115,27 @@ const StyledSnapShotButton = styled.button`
   }
 `;
 
+const ThumbnailsContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 10px;
+`;
+
+const Thumbnail = styled.img`
+  width: 100px;
+  height: 56px; /* Maintain 16:9 aspect ratio */
+  object-fit: cover;
+  margin-right: 10px;
+  margin-bottom: 10px;
+  border: 1px solid whitesmoke;
+  border-radius: 5px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #4CAF50;
+  }
+`;
+
 const App = () => {
   const [assetsVisibility, setAssetsVisibility] = useState({
     slash: true,
@@ -125,9 +148,8 @@ const App = () => {
     chair: 0,
   });
   const [controlsVisible, setControlsVisible] = useState(true);
-  const [snapshot, setSnapshot] = useState(null);
+  const [snapshots, setSnapshots] = useState([]);
 
-  // Store loaded objects and transform controls
   const objectsRef = useRef({});
   const transformControlsRef = useRef({});
   const rendererRef = useRef();
@@ -136,7 +158,6 @@ const App = () => {
   const cameraRef = useRef();
 
   useEffect(() => {
-    // Scene, Camera, Renderer
     const scene = new THREE.Scene();
     sceneRef.current = scene;
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -149,7 +170,7 @@ const App = () => {
 
     const resizeRenderer = () => {
       const width = canvasWrapper.clientWidth;
-      const height = canvasWrapper.clientHeight;
+      const height = width / (16 / 9);
       renderer.setSize(width, height);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
@@ -158,21 +179,18 @@ const App = () => {
     resizeRenderer();
     window.addEventListener('resize', resizeRenderer);
 
-    // Orbit Controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
     controls.screenSpacePanning = false;
     controls.maxPolarAngle = Math.PI / 2;
 
-    // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight.position.set(5, 10, 7.5);
     scene.add(directionalLight);
 
-    // Function to handle Transform Controls
     const attachTransformControls = (object, key) => {
       const transformControls = new TransformControls(camera, renderer.domElement);
       transformControls.attach(object);
@@ -195,7 +213,6 @@ const App = () => {
       transformControlsRef.current[key] = transformControls;
     };
 
-    // Load Character Model
     const characterLoader = new FBXLoader();
     characterLoader.load(
       './src/models/slash/A_man_who_looks_like_slash_the_guitar_player_Full_body_0606154520_refine.fbx',
@@ -208,7 +225,6 @@ const App = () => {
       }
     );
 
-    // Load Environment Model
     const environmentLoader = new FBXLoader();
     environmentLoader.load(
       './src/models/house/interior_white_square_box_straight_lines_windows_on_two_sid_0606191936_refine.fbx',
@@ -221,12 +237,11 @@ const App = () => {
       }
     );
 
-    // Load Chair Model
     const chairLoader = new FBXLoader();
     chairLoader.load(
-      './src/models/chair/Chair_0619085451.fbx', // Replace with your actual chair model path
+      './src/models/chair/Chair_0619085451.fbx',
       (fbx) => {
-        fbx.position.set(0.5, 0, 0.5);  // Adjust the position as necessary
+        fbx.position.set(0.5, 0, 0.5);
         fbx.scale.set(0.01, 0.01, 0.01);
         attachTransformControls(fbx, 'chair');
         scene.add(fbx);
@@ -249,7 +264,6 @@ const App = () => {
     }
     animate();
 
-    // Add event listener for 'H' key
     const handleKeyDown = (event) => {
       if (event.key.toLowerCase() === 'h') {
         setControlsVisible((prevVisible) => {
@@ -276,132 +290,130 @@ const App = () => {
     setAssetsVisibility((prevState) => {
       const newState = { ...prevState, [key]: !prevState[key] };
       if (objectsRef.current[key]) {
-        objectsRef.current[key].visible = new
+        objectsRef.current[key].visible = newState[key];
+        if (transformControlsRef.current[key]) {
+          transformControlsRef.current[key].visible = newState[key] && controlsVisible;
+        }
+        console.log(`${key} visibility toggled to: ${newState[key]}`);
+      }
+      return newState;
+    });
+  };
 
+  const handleScaleChange = (key, value) => {
+    setAssetsScale((prevState) => {
+      const newState = { ...prevState, [key]: value };
+      if (objectsRef.current[key]) {
+        let scaleFactor = 1;
+        if (value !== 0) {
+          scaleFactor = Math.pow(2, value / 10);
+        }
+        objectsRef.current[key].scale.set(scaleFactor, scaleFactor, scaleFactor);
+        console.log(`${key} scale changed to: ${scaleFactor}`);
+      }
+      return newState;
+    });
+  };
 
-newState[key] && controlsVisible;
-console.log(`${key} visibility toggled to: ${newState[key]}`);
-}
-return newState;
-});
-};
+  const handleTakeSnapshot = () => {
+    const canvas = document.createElement('canvas');
+    const width = canvasWrapperRef.current.clientWidth;
+    const height = width / (16 / 9);
+    canvas.width = width;
+    canvas.height = height;
 
-const handleScaleChange = (key, value) => {
-setAssetsScale((prevState) => {
-const newState = { ...prevState, [key]: value };
-if (objectsRef.current[key]) {
-let scaleFactor = 1; // Default scale factor
-if (value !== 0) {
-  scaleFactor = Math.pow(2, value / 10); // Calculate scale factor
-}
+    const context = canvas.getContext('2d');
+    rendererRef.current.render(sceneRef.current, cameraRef.current);
 
-objectsRef.current[key].scale.set(scaleFactor, scaleFactor, scaleFactor);
-console.log(`${key} scale changed to: ${scaleFactor}`);
-}
-return newState;
-});
-};
+    context.drawImage(rendererRef.current.domElement, 0, 0, width, height);
 
-const handleTakeSnapshot = () => {
-// Create a canvas element for rendering
-const canvas = document.createElement('canvas');
-const width = canvasWrapperRef.current.clientWidth;
-const height = canvasWrapperRef.current.clientHeight;
-const aspectRatio = 16 / 9;
-canvas.width = width;
-canvas.height = width / aspectRatio;
+    const dataURL = canvas.toDataURL();
+    setSnapshots((prevSnapshots) => [...prevSnapshots, dataURL]);
+  };
 
-const context = canvas.getContext('2d');
-rendererRef.current.render(sceneRef.current, cameraRef.current);
-
-// Draw renderer result on canvas
-context.drawImage(rendererRef.current.domElement, 0, 0, width, height);
-
-// Create an image element from the canvas data
-const dataURL = canvas.toDataURL();
-setSnapshot(dataURL);
-};
-
-return (
-<Container>
-<StyledTitleContainer>
-<StyledH1>3D Model Viewer</StyledH1>
-</StyledTitleContainer>
-<StyledWorkspace>
-<ControlSide>
-  <h2>Assets</h2>
-  <ToggleLabel>
-    <input
-      type="checkbox"
-      checked={assetsVisibility.slash}
-      onChange={() => toggleVisibility('slash')}
-    />
-    Slash
-  </ToggleLabel>
-  <SliderLabel>
-    Scale:
-    <input
-      type="range"
-      min="-10"
-      max="10"
-      value={assetsScale.slash}
-      onChange={(e) => handleScaleChange('slash', parseInt(e.target.value))}
-    />
-  </SliderLabel>
-  <ToggleLabel>
-    <input
-      type="checkbox"
-      checked={assetsVisibility.house}
-      onChange={() => toggleVisibility('house')}
-    />
-    House
-  </ToggleLabel>
-  <SliderLabel>
-    Scale:
-    <input
-      type="range"
-      min="-10"
-      max="10"
-      value={assetsScale.house}
-      onChange={(e) => handleScaleChange('house', parseInt(e.target.value))}
-    />
-  </SliderLabel>
-  <ToggleLabel>
-    <input
-      type="checkbox"
-      checked={assetsVisibility.chair}
-      onChange={() => toggleVisibility('chair')}
-    />
-    Chair
-  </ToggleLabel>
-  <SliderLabel>
-    Scale:
-    <input
-      type="range"
-      min="-10"
-      max="10"
-      value={assetsScale.chair}
-      onChange={(e) => handleScaleChange('chair', parseInt(e.target.value))}
-    />
-  </SliderLabel>
- 
-</ControlSide>
-<CanvasWrapper id="canvas-wrapper" ref={canvasWrapperRef}>
-  {/* Placeholder for WebGL Canvas */}
-</CanvasWrapper>
-<ControlSide>
-  <h2>Controls</h2>
-  {/* Additional controls can be added here */}
-  <StyledSnapShotContainer>
-    {snapshot && <img src={snapshot} alt="Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-  </StyledSnapShotContainer>
-  <StyledSnapShotButton onClick={handleTakeSnapshot}>
-    Take a Photo
-  </StyledSnapShotButton>
-</ControlSide>
-</StyledWorkspace>
-</Container>
-);
+  return (
+    <Container>
+      <StyledTitleContainer>
+        <StyledH1>3D Model Viewer</StyledH1>
+      </StyledTitleContainer>
+      <StyledWorkspace>
+        <ControlSide>
+          <h2>Assets</h2>
+          <ToggleLabel>
+            <input
+              type="checkbox"
+              checked={assetsVisibility.slash}
+              onChange={() => toggleVisibility('slash')}
+            />
+            Slash
+          </ToggleLabel>
+          <SliderLabel>
+            Scale:
+            <input
+              type="range"
+              min="-10"
+              max="10"
+              value={assetsScale.slash}
+              onChange={(e) => handleScaleChange('slash', parseInt(e.target.value))}
+            />
+          </SliderLabel>
+          <ToggleLabel>
+            <input
+              type="checkbox"
+              checked={assetsVisibility.house}
+              onChange={() => toggleVisibility('house')}
+            />
+            House
+          </ToggleLabel>
+          <SliderLabel>
+            Scale:
+            <input
+              type="range"
+              min="-10"
+              max="10"
+              value={assetsScale.house}
+              onChange={(e) => handleScaleChange('house', parseInt(e.target.value))}
+            />
+          </SliderLabel>
+          <ToggleLabel>
+            <input
+              type="checkbox"
+              checked={assetsVisibility.chair}
+              onChange={() => toggleVisibility('chair')}
+            />
+            Chair
+          </ToggleLabel>
+          <SliderLabel>
+            Scale:
+            <input
+              type="range"
+              min="-10"
+              max="10"
+              value={assetsScale.chair}
+              onChange={(e) => handleScaleChange('chair', parseInt(e.target.value))}
+            />
+          </SliderLabel>
+        </ControlSide>
+        <CanvasWrapper id="canvas-wrapper" ref={canvasWrapperRef}>
+          {/* Placeholder for WebGL Canvas */}
+        </CanvasWrapper>
+        <ControlSide>
+          <h2>Controls</h2>
+          <StyledSnapShotContainer>
+            {snapshots.length > 0 && <img src={snapshots[snapshots.length - 1]} alt="Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+          </StyledSnapShotContainer>
+          <StyledSnapShotButton onClick={handleTakeSnapshot}>
+            Take a Photo
+          </StyledSnapShotButton>
+          <ThumbnailsContainer>
+            {snapshots.map((snapshot, index) => (
+              <Thumbnail key={index} src={snapshot} alt={`Snapshot ${index + 1}`} />
+            ))}
+          </ThumbnailsContainer>
+        </ControlSide>
+      </StyledWorkspace>
+    </Container>
+  );
 };
 
 export default App;
