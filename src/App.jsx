@@ -115,24 +115,25 @@ const StyledSnapShotButton = styled.button`
   }
 `;
 
-const ThumbnailsContainer = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  margin-top: 10px;
+const StyledThumbnailContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 80px); /* Three columns */
+  grid-gap: 10px;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 10px 0;
 `;
 
-const Thumbnail = styled.img`
-  width: 100px;
-  height: 56px; /* Maintain 16:9 aspect ratio */
+const StyledThumbnail = styled.img`
+  width: 80px;
+  height: 45px;
   object-fit: cover;
-  margin-right: 10px;
-  margin-bottom: 10px;
-  border: 1px solid whitesmoke;
   border-radius: 5px;
   cursor: pointer;
+  border: ${(props) => (props.active ? '2px solid #4CAF50' : '2px solid transparent')};
 
   &:hover {
-    border-color: #4CAF50;
+    border: 2px solid #4CAF50;
   }
 `;
 
@@ -148,7 +149,8 @@ const App = () => {
     chair: 0,
   });
   const [controlsVisible, setControlsVisible] = useState(true);
-  const [snapshots, setSnapshots] = useState([]);
+  const [snapshot, setSnapshot] = useState(null);
+  const [thumbnails, setThumbnails] = useState([]);
 
   const objectsRef = useRef({});
   const transformControlsRef = useRef({});
@@ -328,13 +330,18 @@ const App = () => {
     context.drawImage(rendererRef.current.domElement, 0, 0, width, height);
 
     const dataURL = canvas.toDataURL();
-    setSnapshots((prevSnapshots) => [...prevSnapshots, dataURL]);
+    setSnapshot(dataURL);
+    setThumbnails((prevThumbnails) => [...prevThumbnails, dataURL]); // Add new snapshot to thumbnails
+  };
+
+  const handleThumbnailClick = (thumbnail) => {
+    setSnapshot(thumbnail);
   };
 
   return (
     <Container>
       <StyledTitleContainer>
-        <StyledH1>3D Model Viewer</StyledH1>
+        <StyledH1>Dream House</StyledH1>
       </StyledTitleContainer>
       <StyledWorkspace>
         <ControlSide>
@@ -400,16 +407,22 @@ const App = () => {
         <ControlSide>
           <h2>Controls</h2>
           <StyledSnapShotContainer>
-            {snapshots.length > 0 && <img src={snapshots[snapshots.length - 1]} alt="Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+            {snapshot && <img src={snapshot} alt="Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
           </StyledSnapShotContainer>
           <StyledSnapShotButton onClick={handleTakeSnapshot}>
             Take a Photo
           </StyledSnapShotButton>
-          <ThumbnailsContainer>
-            {snapshots.map((snapshot, index) => (
-              <Thumbnail key={index} src={snapshot} alt={`Snapshot ${index + 1}`} />
+          <StyledThumbnailContainer>
+            {thumbnails.map((thumb, index) => (
+              <StyledThumbnail
+                key={index}
+                src={thumb}
+                alt={`Thumbnail ${index}`}
+                active={thumb === snapshot}
+                onClick={() => handleThumbnailClick(thumb)}
+              />
             ))}
-          </ThumbnailsContainer>
+          </StyledThumbnailContainer>
         </ControlSide>
       </StyledWorkspace>
     </Container>
